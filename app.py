@@ -12,7 +12,7 @@ load_dotenv()
 
 # 스트림릿 설정
 st.set_page_config(
-    page_title="바이낸스 실시간 차트 (업비트 스타일)",
+    page_title="바이낸스 실시간 차트",
     page_icon="📈",
     layout="wide"
 )
@@ -296,33 +296,53 @@ def apply_toss_upbit_style():
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
     }}
 
-    /* 설정 패널 (Expander 내부 등) */
+    /* 설정 패널 (Expander 내부 등) */ 개선 */
     div[data-testid="stExpander"] {{
-        border: none;
-        box-shadow: none;
-        background-color: transparent;
-        margin-bottom: 16px;
-        border-radius: 12px; /* Expander 자체에 radius */
-        overflow: hidden; /* 내용물이 radius를 넘지 않도록 */
+        background-color: {DESIGN_COLORS["panel_bg"]};  /* Expander 전체 배경 */
+        border: 1px solid {DESIGN_COLORS["border"]};      /* Expander 전체 테두리 */
+        border-radius: 12px;                             /* Expander 전체 모서리 둥글게 */
+        box-shadow: 0 2px 8px {DESIGN_COLORS["shadow"]}; /* Expander 전체 그림자 */
+        margin-bottom: 20px;                             /* 다른 요소와의 간격 */
+        overflow: hidden; /* 자식 요소가 부모의 둥근 모서리를 넘지 않도록 보장. 모서리 문제 해결의 핵심 */
     }}
+
     div[data-testid="stExpander"] summary {{
-        padding: 16px 20px;
-        border-bottom: 1px solid {DESIGN_COLORS["border"]};
-        font-size: 16px;
-        font-weight: 600;
-        background-color: {DESIGN_COLORS["panel_bg"]}; /* Expander 헤더 배경 */
-        border-radius: 12px 12px 0 0; /* 상단 모서리만 radius */
+        padding: 16px 20px; /* 내부 여백 */
+        font-size: 16px;    /* 글자 크기 */
+        font-weight: 600;   /* 글자 두께 */
+        color: {DESIGN_COLORS["text"]}; /* 기본 글자색 */
+        background-color: transparent;  /* summary 자체 배경은 투명하게 하여 부모(stExpander)의 배경색을 사용 */
+        cursor: pointer;
+        transition: color 0.2s ease; /* 호버 시 색상 변경 부드럽게 */
+        outline: none; /* 클릭/포커스 시 기본 아웃라인 제거 */
+        border-bottom: none; /* 기본적으로 summary 하단 테두리 없음. 열렸을 때만 추가 */
+        display: flex; /* 내부 아이콘 정렬 등을 위해 flex 사용 가능 */
+        align-items: center; /* 수직 중앙 정렬 */
+        justify-content: space-between; /* 제목과 화살표 양 끝 정렬 */
     }}
+
     div[data-testid="stExpander"] summary:hover {{
+        color: {DESIGN_COLORS["toss_blue"]}; /* 호버 시 글자색 변경 */
+    }}
+
+    /* Streamlit Expander의 기본 화살표 아이콘 색상 조정 */
+    div[data-testid="stExpander"] summary::-webkit-details-marker {{
+        color: {DESIGN_COLORS["light_text"]};
+    }}
+    div[data-testid="stExpander"] summary:hover::-webkit-details-marker {{
         color: {DESIGN_COLORS["toss_blue"]};
     }}
+
+    /* Expander가 열렸을 때 (details 태그에 open 속성이 있을 때) summary의 스타일 */
+    div[data-testid="stExpander"] details[open] > summary {{
+        border-bottom: 1px solid {DESIGN_COLORS["border"]}; /* 열렸을 때만 summary와 content를 구분하는 선 추가 */
+    }}
+
+    /* Expander 내용 영역 (stVerticalBlock) */
     div[data-testid="stExpander"] div[data-testid="stVerticalBlock"] {{
-        padding: 20px;
-        background-color: {DESIGN_COLORS["panel_bg"]}; /* Expander 내용 배경 */
-        border: 1px solid {DESIGN_COLORS["border"]};
-        border-top: none; /* summary의 border-bottom과 중복 방지 */
-        box-shadow: 0 2px 8px {DESIGN_COLORS["shadow"]};
-        border-radius: 0 0 12px 12px; /* 하단 모서리만 radius */
+        padding: 20px; /* 내용 영역의 내부 여백 */
+        background-color: transparent; /* 내용 영역 배경도 투명하게 하여 부모(stExpander)의 배경색을 사용 */
+        /* 테두리, 그림자, 모서리 둥글기는 부모인 stExpander에서 이미 처리되었으므로 여기서는 불필요 */
     }}
 
 
@@ -558,10 +578,9 @@ apply_toss_upbit_style()
 # 업비트 스타일 헤더
 def render_header():
     header_html = f"""
-    <div class="menu-container" style="position: sticky; top: 0; z-index: 999;">
+    <div class="menu-container" style="position: sticky; top: 0; z-index: 999; margin-top: 20px; margin-bottom: 20px; border-radius: 10px;">
         <div style="display: flex; align-items: center; gap: 12px;">
             <div style="color: {DESIGN_COLORS['header_text']}; font-weight: 600; font-size: 18px;">
-                <img src="https://cdn-icons-png.flaticon.com/512/5968/5968770.png" width="24" style="margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);"/>
                 바이낸스 차트
             </div>
         </div>
@@ -666,7 +685,7 @@ INTERVAL_MAPPING = {
 }
 
 # 상단 컨트롤 영역
-st.markdown('<div class="control-area">', unsafe_allow_html=True)
+# st.markdown('<div class="control-area">', unsafe_allow_html=True)
 # 각 컨트롤에 고유한 key를 할당해야 합니다.
 # st.columns의 비율을 조정하여 컨트롤들이 한 줄에 잘 보이도록 합니다.
 col1, col2, col3, col4, col5_check, col5_slider = st.columns([2.5, 1.2, 2.5, 1.5, 0.5, 1.5])
@@ -707,7 +726,7 @@ else:
         st.empty()
 
 
-st.markdown('</div>', unsafe_allow_html=True)
+# st.markdown('</div>', unsafe_allow_html=True)
 
 
 # 메인 컨텐츠 레이아웃 (차트 + 우측 정보 패널)
