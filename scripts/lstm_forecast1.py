@@ -10,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("✅ 사용 디바이스:", device)
 
 # ✅ 데이터 로딩 (차분 없이 원본)
-df = pd.read_csv("BTC_5min_1year_data.csv")
+df = pd.read_csv("data/BTCUSDT_2025.csv")
 features = df[['open', 'high', 'low', 'close', 'volume']].values
 
 # ✅ Min-Max 정규화 (차분 없이)
