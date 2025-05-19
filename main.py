@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from shared_log import log_buffer
+from logs.shared_log import log_buffer
 
 app = FastAPI()
 
