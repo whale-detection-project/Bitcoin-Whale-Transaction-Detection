@@ -4,6 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 from models.model import LSTMAutoencoder
 import logging
 from logs.log_config import setup_logger
+from logs.shared_log import log_buffer
 setup_logger()
 
 # 기본 설정
@@ -46,23 +47,32 @@ def detect_anomaly(new_candle):
 
     if len(window) < SEQ_LEN + 1:
         logging.info(f"📉 캔들 수신됨 (윈도우 길이: {len(window)}) - 아직 이상 탐지 안 함")
-        return  # 아직 윈도우 준비 안됨
+        return
 
-    # 차분 후 정규화
+    # ✅ 1. 슬라이딩 윈도우 → 차분 + 정규화
     window_np = np.array(window)
     diffed = np.diff(window_np, axis=0)
     scaled = scaler.transform(diffed[-SEQ_LEN:])
 
+    # ✅ 2. 모델에 입력
     x = torch.tensor(scaled, dtype=torch.float32).unsqueeze(0).to(DEVICE)
     with torch.no_grad():
         recon = model(x)
     error = torch.mean(torch.abs(recon - x)).item()
 
-    # 이상 탐지 로그
-    if error < lower_thres or error > upper_thres:
+    # ✅ 3. 여기!! 이상 여부 판별 후 log_buffer에 저장
+    log_msg = {
+        "mae": error,
+        "anomaly": error < lower_thres or error > upper_thres
+    }
+    log_buffer.append(log_msg)  # ✅ 이 줄이 FastAPI → 프론트와 연결되는 핵심
+
+    # ✅ 4. 콘솔 출력
+    if log_msg["anomaly"]:
         logging.warning(f"🚨 이상치 감지됨! MAE = {error:.6f}")
     else:
-        logging.info(f"정상 데이터 | MAE = {error:.6f}")
+        logging.info(f"✅ 정상 캔들 | MAE = {error:.6f}")
 
-    # 슬라이딩 윈도우 유지
+    # ✅ 5. 슬라이딩 윈도우 유지
     window.pop(0)
+
