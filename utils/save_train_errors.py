@@ -1,13 +1,13 @@
 import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
+from models.model import LSTMAutoencoder
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-from models.model import LSTMAutoencoder
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
-sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 
 # -----------------------------
 # 1. 설정
@@ -58,11 +58,13 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False, n
 # -----------------------------
 # 3. 모델 로드
 # -----------------------------
-model = LSTMAutoencoder(input_dim=features_scaled.shape[1],
-                        seq_len=SEQ_LEN,
-                        hidden1=128,
-                        hidden2=64,
-                        latent=32).to(DEVICE)
+model = LSTMAutoencoder(
+    input_dim=features_scaled.shape[1],
+    seq_len=SEQ_LEN,
+    hidden1=128,
+    hidden2=64,
+    latent=32
+)
 model.load_state_dict(torch.load("models/best_lstm_autoencoder.pt", map_location=DEVICE))
 model.eval()
 
