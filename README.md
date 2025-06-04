@@ -105,3 +105,7 @@ XGBoost 모델 기반의 예측 시스템과 통계 분석 모듈을 구축합�
    python scripts/train.py
 3. **테스트**
    python scripts/test.py
+
+4. **실시간 서버 실행**
+   - `python scripts/server.py` 명령으로 FastAPI 서버 실행
+   - 동작 원리는 `SERVER_OVERVIEW.md` 문서 참고
