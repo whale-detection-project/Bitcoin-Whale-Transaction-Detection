@@ -1,6 +1,6 @@
 # FastAPI 기반 실시간 고래 탐지 서버 개요
 
-이 문서는 `xgb_whale_classifier_with_normal.joblib` 모델을 활용하여 비트코인 트랜잭션을 실시간으로 분류하는 서버 시스템의 기본 동작을 설명합니다.
+이 문서는 `dog.joblib` 모델을 활용하여 비트코인 트랜잭션을 실시간으로 분류하는 서버 시스템의 기본 동작을 설명합니다.
 
 ## 동작 흐름
 1. **데이터 수신**: 비트코인 트랜잭션을 WebSocket을 통해 수신합니다.
@@ -15,7 +15,7 @@ import pandas as pd
 from fastapi import FastAPI, WebSocket
 
 app = FastAPI()
-model = joblib.load("model/xgb_whale_classifier_with_normal.joblib")
+model = joblib.load("model/dog.joblib")
 
 LABELS = {
     0: "normal",
