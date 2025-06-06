@@ -79,9 +79,9 @@ XGBoost 모델 기반의 예측 시스템과 통계 분석 모듈을 구축합�
 
 1. **데이터 수집**
    - Binance API 또는 온체인 데이터셋 활용
-   - `BTC_1m.csv` 등 CSV 기반
+   - `1000btc.csv` 등 CSV 기반
 
-2. **라벨링 모듈 (`label_stats.py`)**
+2. **라벨링 모듈 (`labeling.py`)**
    - 규칙 기반으로 거래 유형 분류 및 라벨링
    - `labeled_whales.csv` 저장
    - 라벨링된 데이터에서 고래 거래만 필터링
@@ -91,7 +91,7 @@ XGBoost 모델 기반의 예측 시스템과 통계 분석 모듈을 구축합�
    - XGBoost 기반 지도 학습 분류기 학습
    - `dog.joblib`로 모델 저장
 
-4. **예측 및 평가 (`test`)**
+4. **예측 및 평가 (`test.py`)**
    - 테스트 데이터셋에 대해 예측 수행
    - 규칙 기반 라벨과 예측 결과 비교
 
@@ -100,7 +100,7 @@ XGBoost 모델 기반의 예측 시스템과 통계 분석 모듈을 구축합�
 ## 📦 사용 방법
 
 1. **라벨링 실행**
-   python scripts/label_stats.py
+   python scripts/labeling.py
 2. **모델 학습**
    python scripts/train.py
 3. **테스트**
