@@ -1,0 +1,69 @@
+# Bitcoin Whale Anomaly Detection Configuration
+# ==============================================
+
+# 데이터 설정
+data:
+  input_file: 'data/1000btc.csv'
+  output_dir: 'analysis/exploratory/results'
+
+# EDA 설정
+eda:
+  clustering_features:
+    - 'max_output_ratio' # 집중도 (가장 중요)
+    - 'output_count' # 분산도 (두 번째 중요)
+    - 'fee_per_max_ratio' # 전문성 (세 번째 중요)
+    - 'hour' # 시간 패턴 (시계열)
+
+  risk_scoring:
+    concentration_threshold: 0.9 # max_output_ratio > 0.9
+    concentration_score: 30
+    high_output_threshold: 100 # output_count > 100
+    high_output_score: 20
+    low_fee_threshold: 0.000001 # fee_per_max_ratio < 0.000001
+    low_fee_score: 25
+    suspicious_hours: [2, 3, 4, 5] # 새벽 시간대
+    time_score: 15
+    distribution_threshold: 50 # output_count > 50 AND max_output_ratio < 0.1
+    distribution_score: 10
+    anomaly_threshold: 50 # 현재 임계값
+
+# 클러스터링 설정
+clustering:
+  method: 'kmeans'
+  max_clusters: 15
+  random_state: 42
+  n_init: 10
+  correlation_threshold: 0.7 # 다중공선성 임계값
+
+# 시계열 분석 설정
+time_series:
+  stationarity_pvalue: 0.05 # ADF 테스트 p-value 임계값
+  aggregation_period: 'daily' # 일별 집계
+  sequence_length: 14 # LSTM용 시퀀스 길이 (권장: 7-14일)
+
+# 시각화 설정
+visualization:
+  figsize: [12, 8]
+  dpi: 300
+  style: 'seaborn'
+  font_family:
+    macos: 'AppleGothic'
+    windows: 'Malgun Gothic'
+    linux: 'DejaVu Sans'
+
+# 모델 평가 설정
+evaluation:
+  test_size: 0.2
+  validation_size: 0.2
+  cv_folds: 5
+  metrics:
+    - 'silhouette_score' # 클러스터링
+    - 'f1_score' # 이상탐지
+    - 'precision'
+    - 'recall'
+
+# 로깅 설정
+logging:
+  level: 'INFO'
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  file: 'logs/eda_analysis.log'
