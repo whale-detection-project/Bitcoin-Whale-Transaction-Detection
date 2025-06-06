@@ -10,21 +10,24 @@ tqdm.pandas()
 # 🐋 고래 유형 분류 함수
 def classify_whale(row):
     if row['input_count'] >= 10 and row['output_count'] <= 2:
-        return 0  # less_output_whale
+        return 0  # 다수입력 단일출력형
+    
     elif row['input_count'] <= 2 and row['output_count'] >= 10:
-        return 1  # less_input_whale
+        return 1  # 단일입력 다수출력형
+    
     elif (
-        row['input_count'] >= 20 and 
-        row['output_count'] <= 2 and 
-        row['max_input_value'] < 0.05 * row['total_input_value']
-    ):
-        return 2  # dust_merging_whale
-    elif row.get('fee_per_max_ratio', 0) > 0.01:
-        return 3  # fast_transfer_whale
-    elif row.get('max_output_ratio', 1) < 0.5:
-        return 4  # clean_hide_whale
+    row['input_count'] >= 20 and
+    row['output_count'] <= 5 ):
+        return 2  # 잔돈합치기형
+        
+    elif row.get('fee_per_max_ratio', 0) > 0.000001:
+        return 3  # 급행전송형
+    
+    elif row['fee_per_max_ratio'] < 0.000001 and row['max_output_ratio'] < 0.2:
+        return 4  # 은닉형
+    
     else:
-        return 5  # unknown_whale
+        return 5  # 기타/미분류형
 
 # 🏷️ tqdm 적용 라벨 생성
 print("📌 고래 유형 분류 중...")
@@ -36,7 +39,7 @@ whale_label_map = {
     1: '1: 단일입력 다수출력형 (less_input_whale)',
     2: '2: 잔돈합치기형 (dust_merging_whale)',
     3: '3: 급행전송형 (fast_transfer_whale)',
-    4: '4: 은닉형 (clean_hide_whale)',
+    4: '4: 은닉전송형 (clean_hide_whale)',
     5: '5: 기타/미분류형 (unknown_whale)'
 }
 
