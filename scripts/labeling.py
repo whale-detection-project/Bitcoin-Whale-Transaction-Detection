@@ -26,8 +26,11 @@ def classify_whale(row):
     elif row['fee_per_max_ratio'] < 0.000001 and row['max_output_ratio'] < 0.2:
         return 4  # 은닉형
     
+    elif row['input_count'] == 1 and row['output_count'] == 2:
+        return 5  # 이중 분산형 고래 (dual_split_whale)
+
     else:
-        return 5  # 기타/미분류형
+        return 6  # 기타/미분류형
 
 # 🏷️ tqdm 적용 라벨 생성
 print("📌 고래 유형 분류 중...")
@@ -38,9 +41,10 @@ whale_label_map = {
     0: '0: 다수입력 단일출력형 (less_output_whale)',
     1: '1: 단일입력 다수출력형 (less_input_whale)',
     2: '2: 잔돈합치기형 (dust_merging_whale)',
-    3: '3: 급행전송형 (fast_transfer_whale)',
-    4: '4: 은닉전송형 (clean_hide_whale)',
-    5: '5: 기타/미분류형 (unknown_whale)'
+    3: '3: 급행 전송형 (fast_transfer_whale)',
+    4: '4: 은닉 전송형 (clean_hide_whale)',
+    5: '5: 이중분산 전송형 (dual_split_whale)',
+    6: '6: 기타/미분류형 (unknown_whale)'
 }
 
 # 📊 통계 출력
