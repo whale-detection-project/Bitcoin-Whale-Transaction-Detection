@@ -40,8 +40,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 model = XGBClassifier(
     objective="multi:softprob",
     num_class=len(unique_labels),
-    eval_metric='mlogloss',
-    use_label_encoder=False
+    eval_metric='mlogloss'
 )
 model.fit(X_train, y_train)
 
@@ -51,8 +50,20 @@ y_pred = pd.Series(y_pred_idx).map(index_to_label)
 y_test_original = y_test.map(index_to_label)
 label_names = [original_whale_label_map[label] for label in unique_labels]
 
+# 📋 classification_report → DataFrame 정리 출력
+report = classification_report(
+    y_test_original,
+    y_pred,
+    target_names=label_names,
+    output_dict=True,
+    zero_division=0
+)
+report_df = pd.DataFrame(report).transpose()
+
+# 📊 정렬된 표 형태로 보기 좋게 출력
+pd.set_option('display.unicode.east_asian_width', True)
 print("📋 테스트셋 성능 평가:")
-print(classification_report(y_test_original, y_pred, target_names=label_names))
+print(report_df.round(3))
 
 # 💾 모델 및 라벨 맵 저장
 os.makedirs("models", exist_ok=True)
@@ -60,7 +71,6 @@ joblib.dump(model, "models/whale_classifier.joblib")
 
 # numpy.int64 → int 로 변환
 index_to_label_json = {int(k): int(v) for k, v in index_to_label.items()}
-
 with open("models/index_to_label.json", "w") as f:
     json.dump(index_to_label_json, f)
 
