@@ -94,8 +94,11 @@
 
 ```bash
 # 1. 모델 학습 (클러스터링 + 분류)
-python train.py
+python /scripts/train.py
 
 # 2. 전체 테스트셋에 대해 평가
-python test.py
+python /scripts/test.py
+
+# 3. 실시간 탐지 모델 서버 실행행
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 

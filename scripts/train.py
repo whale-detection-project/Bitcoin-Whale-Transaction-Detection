@@ -43,7 +43,7 @@ xgb_model = xgb.XGBClassifier(
     colsample_bytree=0.8,
     random_state=42,
     eval_metric='mlogloss',
-    tree_method='gpu_hist'
+    tree_method='hist'
 )
 xgb_model.fit(X, y, sample_weight=sample_weights)
 
