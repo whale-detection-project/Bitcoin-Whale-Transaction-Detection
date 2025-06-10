@@ -17,10 +17,11 @@ tqdm.pandas()
 # 고래 라벨 정의
 whale_labels = {
     0: 'normal',
-    1: 'less_output_whale',
-    2: 'less_input_whale',
-    #3: 'dust_merging_whale',
-    3: 'fast_transfer_whale',
+    1: 'less_output_whale', #판매자 5명이상 구매자 2명이하인 경우
+    2: 'less_input_whale', #판매자 2명이하 구매자 5명이상인 경우
+    3: 'less_to_less_whale', # 판매자 2명이하 구매자 2명이하
+    4: 'dust_merging_whale', #판매자 10명이상 구매자 10명이상
+    5: 'fast_transfer_whale', #수수료가 전채 아웃풋밸류의 1퍼이상인경우
     #5: 'clean_hide_whale'
 }
 
@@ -39,22 +40,27 @@ def classify_whale(row):
     input_count = row['input_count']
     output_count = row['output_count']
     total_input = row['total_input_value']
-    #max_input = row['max_input_value']
+    total_output = row['total_output_value']  # total_input
+    max_input = row['max_input_value']
     max_output = row['max_output_value']
     max_output_ratio = row['max_output_ratio']
     fee_ratio = row['fee_per_max_ratio']
     #has_zero = row['has_zero_output']
 
-    if total_input < 5e9 and max_output < 1e8:
+    if total_input < 1e10: #and max_output < 3e9 :
         return 0
-    if input_count >= 5 and output_count <= 2 and max_output_ratio > 0.9:
+        
+    # ───── 고액/고래 후보만 여기서 분기 ─────
+    if  input_count >= 5 and output_count <= 2 and max_output_ratio > 0.9:
         return 1 #less_output_whale
     elif input_count <=2 and output_count >= 5 and max_output_ratio < 0.3:
         return 2 #less_input_whale
-    #elif input_count >= 50 and output_count <= 2 and max_input < (0.03 * total_input):
-        #return 3 #dust_merging_whale
+    elif input_count <= 2 and output_count <=2:
+        return 3 #
+    elif input_count >= 10 and output_count >= 10 and max_input < (0.1 * total_input):
+        return 4 #dust_merging_whale
     elif fee_ratio > 0.01:
-        return 3 #fast_transfer_whale
+        return 5 #fast_transfer_whale
     #elif has_zero and output_count > 5:
         #return 5 #clean_hide_whale
     else:

@@ -16,13 +16,15 @@ import numpy as np
 import joblib
 
 # 🐋 고래 라벨 정의 (0 포함)
+
 whale_labels = {
     0: 'normal',
-    1: 'less_output_whale', #소수의 출력 고래
-    2: 'less_input_whale', #소수의 입력 고래
-    #3: 'dust_merging_whale', #잔돈 처리 고래
-    3: 'fast_transfer_whale', #빠른 전송 고래
-    #5: 'clean_hide_whale' #세탁/숨김 고래
+    1: 'less_output_whale',
+    2: 'less_input_whale',
+    3: 'less_to_less_whale',
+    4: 'dust_merging_whale',
+    5: 'fast_transfer_whale',
+    #5: 'clean_hide_whale'
 }
 
 def load_and_preprocess_data(csv_path: str):
