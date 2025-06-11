@@ -17,8 +17,8 @@ df = pd.read_csv("dataset/1000btc_test.csv")
 
 # 🔹 2. 피처 정의
 features = [
-    'input_count', 'output_count', 'max_output_ratio',
-    'fee_per_max_ratio', 'max_input_ratio'
+    'input_count', 'output_count', 'max_output_ratio'
+    , 'max_input_ratio'
 ]
 
 # 🔹 3. 전처리: 로그 변환
@@ -70,7 +70,7 @@ with open("test/eval_result.txt", "w", encoding="utf-8") as f:
     cluster_centers_orig = np.expm1(cluster_centers_log)  # log1p → 원복
     df_centers = pd.DataFrame(cluster_centers_orig, columns=features)
     df_centers.index.name = "cluster"
-    f.write(df_centers.round(2).to_string() + "\n")
+    f.write(df_centers.to_string(float_format='{:,.7f}'.format) + "\n")
 
     f.write("\n📌 클러스터 해석\n")
     f.write("Cluster 0 : 소수 입력 → 중간 다수 출력, 지갑 리밸런싱 추정\n")
