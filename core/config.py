@@ -1,5 +1,6 @@
 # core/config.py
 import logging
+import os
 import sys
 from pymongo import MongoClient
 
@@ -17,7 +18,9 @@ root_logger.setLevel(logging.INFO)
 root_logger.addHandler(handler)
 
 # ✅ MongoDB 설정
-mongo_client = MongoClient("mongodb://localhost:27017/")
+
+mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+mongo_client = MongoClient(mongo_uri)
 db = mongo_client["whale_detection"]
 collection = db["whale_logs"]
 
