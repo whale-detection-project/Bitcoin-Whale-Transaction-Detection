@@ -39,6 +39,10 @@ class WebSocketHandler:
             with self.lock:
                 self.latest_result.clear()
                 self.latest_result.update(result)
+            
+            if hasattr(self, "callback"):
+                self.callback({**result, **tx_processed})
+
 
             collection.insert_one({**result, **tx_processed})
 
@@ -57,8 +61,14 @@ class WebSocketHandler:
         logger.info("🔗 Blockchain.com WebSocket 연결됨")
         ws.send(json.dumps({"op": "unconfirmed_sub"}))
 
-    def on_close(self, ws):
-        logger.info("🔌 연결 종료")
+    def on_close(self, ws, close_status_code, close_msg):
+        logger.info(f"🔌 연결 종료: code={close_status_code}, msg={close_msg}")
+
+        
+    # WebSocketHandler 클래스 내부에 추가
+    def set_callback(self, callback):
+        self.callback = callback
+   
 
     def on_error(self, ws, error):
         logger.error(f"❌ 오류 발생: {error}")
@@ -71,7 +81,7 @@ class WebSocketHandler:
             on_error=self.on_error,
             on_message=self.on_message
         )
-        ws.run_forever()
+        ws.run_forever(ping_interval=30, ping_timeout=10)
 
     def get_latest_result(self):
         with self.lock:
