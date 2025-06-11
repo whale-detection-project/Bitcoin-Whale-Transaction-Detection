@@ -5,7 +5,7 @@ services:
     build: .
     container_name: whale-detector
     ports:
-      - "8000:8000"
+      - "8000:8000"  # NPM이 프록시로 접근할 포트
     env_file:
       - .env
     depends_on:
@@ -13,6 +13,8 @@ services:
     restart: always
     working_dir: /app
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - app_net
 
   mongo:
     image: mongo:6.0
@@ -22,6 +24,28 @@ services:
     restart: always
     volumes:
       - mongo_data:/data/db
+    networks:
+      - app_net
+
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"  # 관리자 웹 UI 포트
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - app_net
 
 volumes:
   mongo_data:
+  npm_data:
+  npm_letsencrypt:
+
+networks:
+  app_net:
+    driver: bridge
