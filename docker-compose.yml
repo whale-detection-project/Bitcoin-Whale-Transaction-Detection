@@ -8,6 +8,20 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    depends_on:
+      - mongo
     restart: always
-    working_dir: /app                     # 📌 Dockerfile과 일치하는 작업 경로
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]  # 📌 확실하게 앱 실행
+    working_dir: /app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

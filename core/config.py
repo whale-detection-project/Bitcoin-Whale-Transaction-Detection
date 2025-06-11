@@ -19,7 +19,7 @@ root_logger.addHandler(handler)
 
 # ✅ MongoDB 설정
 
-mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+mongo_uri = os.getenv("MONGODB_URI", "mongodb://mongodb:27017")
 mongo_client = MongoClient(mongo_uri)
 db = mongo_client["whale_detection"]
 collection = db["whale_logs"]
