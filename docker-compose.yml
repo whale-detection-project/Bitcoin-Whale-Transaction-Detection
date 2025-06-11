@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    container_name: whale-detector
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: always
+    working_dir: /app                     # 📌 Dockerfile과 일치하는 작업 경로
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]  # 📌 확실하게 앱 실행
