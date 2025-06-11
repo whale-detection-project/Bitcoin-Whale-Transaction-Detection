@@ -27,4 +27,4 @@ collection = db["whale_logs"]
 # ✅ 상수 설정
 FEATURES = ['input_count', 'output_count', 'max_output_ratio', 'fee_per_max_ratio', 'max_input_ratio']
 WEBSOCKET_URL = "wss://ws.blockchain.info/inv"
-MIN_INPUT_VALUE = 100  # BTC
+MIN_INPUT_VALUE = 1000  # BTC
