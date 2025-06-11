@@ -65,7 +65,6 @@ class WebSocketHandler:
         logger.info(f"🔌 연결 종료: code={close_status_code}, msg={close_msg}")
 
         
-    # WebSocketHandler 클래스 내부에 추가
     def set_callback(self, callback):
         self.callback = callback
    

@@ -11,7 +11,7 @@ import joblib
 
 # 🔹 1. 학습 데이터 로드
 train_df = pd.read_csv("dataset/1000btc_train.csv")
-features = ['input_count', 'output_count', 'max_output_ratio', 'fee_per_max_ratio', 'max_input_ratio']
+features = ['input_count', 'output_count', 'max_output_ratio', 'max_input_ratio']
 
 # 🔹 2. 로그 변환 + 정규화
 X_train_log = train_df[features].apply(lambda x: np.log1p(x))
