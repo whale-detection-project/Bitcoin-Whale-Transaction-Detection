@@ -50,7 +50,7 @@ class WebSocketHandler:
                 f"🚨 고래 거래 감지 → 클러스터 {result['predicted_cluster']}, 총 입력: {tx_processed['total_input_value']:.2f} BTC\n"
                 f"입력수: {tx_processed['input_count']}개, 출력수: {tx_processed['output_count']}개, "
                 f"max_output_ratio: {tx_processed['max_output_ratio']:.4f}, "
-                f"fee_per_max_ratio: {tx_processed['fee_per_max_ratio']:.4f}, "
+                f"fee_per_max_ratio: {tx_processed['fee_per_max_ratio']:.8f}, "
                 f"max_input_ratio: {tx_processed['max_input_ratio']:.4f}"
             )
 
