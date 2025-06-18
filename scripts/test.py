@@ -9,6 +9,8 @@ from sklearn.metrics import (
     confusion_matrix,
     accuracy_score
 )
+from sklearn.manifold import TSNE
+import umap.umap_ as umap
 import xgboost as xgb
 import os
 
@@ -78,13 +80,71 @@ with open("test/eval_result.txt", "w", encoding="utf-8") as f:
     f.write("Cluster 2 : 다수 입력 → 소수 출력, 입력 병합 / Mixing 준비\n")
     f.write("Cluster 3 : 소수 입력 → 다수 출력, 세탁 의심 or 거래소 출금\n")
 
-# 🔹 9. 시각화
+##
+# 🔹 UMAP 시각화
+reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, random_state=42)
+X_umap = reducer.fit_transform(X_scaled)
+
+df['umap1'], df['umap2'] = X_umap[:, 0], X_umap[:, 1]
+
 plt.figure(figsize=(10, 6))
-sns.scatterplot(x=df['pca1'], y=df['pca2'], hue=df['cluster_label'], palette='tab10', s=10)
-plt.title("🖼 PCA Visualization with Cluster Labels")
-plt.xlabel("PCA 1")
-plt.ylabel("PCA 2")
+sns.scatterplot(x='umap1', y='umap2', hue='cluster_label', data=df, palette='tab10', s=10)
+plt.title("🖼 UMAP Visualization with Cluster Labels")
+plt.xlabel("UMAP 1")
+plt.ylabel("UMAP 2")
 plt.legend(title="Cluster", loc='upper right')
 plt.tight_layout()
-plt.savefig("test/pca_visualization.png", dpi=300)
+plt.savefig("test/umap_visualization.png", dpi=300)
 plt.close()
+
+# 🔹 t-SNE 시각화
+tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+X_tsne = tsne.fit_transform(X_scaled)
+
+df['tsne1'], df['tsne2'] = X_tsne[:, 0], X_tsne[:, 1]
+
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='tsne1', y='tsne2', hue='cluster_label', data=df, palette='tab10', s=10)
+plt.title("🖼 t-SNE Visualization with Cluster Labels")
+plt.xlabel("t-SNE 1")
+plt.ylabel("t-SNE 2")
+plt.legend(title="Cluster", loc='upper right')
+plt.tight_layout()
+plt.savefig("test/tsne_visualization.png", dpi=300)
+plt.close()
+
+# 🔹 9. PCA 시각화
+# plt.figure(figsize=(10, 6))
+# sns.scatterplot(x=df['pca1'], y=df['pca2'], hue=df['cluster_label'], palette='tab10', s=10)
+# plt.title("🖼 PCA Visualization with Cluster Labels")
+# plt.xlabel("PCA 1")
+# plt.ylabel("PCA 2")
+# plt.legend(title="Cluster", loc='upper right')
+# plt.tight_layout()
+# plt.savefig("test/pca_visualization.png", dpi=300)
+# plt.close()
+
+## 피쳐별 중요도 분석
+feature_names = ['input_count', 'output_count', 'max_output_ratio', 'max_input_ratio']
+booster = xgb_model.get_booster()
+
+importance_types = ['gain', 'weight', 'cover']
+
+with open("test/eval_result.txt", "a", encoding="utf-8") as f:
+    for importance_type in importance_types:
+        scores = booster.get_score(importance_type=importance_type)
+
+        total_score = sum(scores.values())
+        combined = []
+
+        for fid, score in scores.items():
+            index = int(fid[1:])
+            fname = feature_names[index]
+            ratio = (score / total_score) * 100 if total_score > 0 else 0
+            combined.append((fname, score, ratio))
+
+        combined.sort(key=lambda x: x[1], reverse=True)
+
+        f.write(f"\n📈 [Feature Importance - by {importance_type.title()}]\n")
+        for name, score, ratio in combined:
+            f.write(f"{name}: {score:.4f} ({ratio:.2f}%)\n")

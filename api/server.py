@@ -1,4 +1,3 @@
-# api/server.py
 import logging
 import asyncio
 from threading import Thread
@@ -26,18 +25,18 @@ class APIServer:
             """,
             version="1.0.0",
             docs_url="/api/docs",
-            redoc_url="/api/redoc", 
-            openapi_url="/api/openapi.json"  
+            redoc_url="/api/redoc",
+            openapi_url="/api/openapi.json"
         )
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],  # 개발 중 허용
+            allow_origins=["*"],
             allow_methods=["*"],
             allow_headers=["*"]
         )
         self.scaler, self.xgb_model, self.pca = load_models()
         self.websocket_handler = WebSocketHandler(self.scaler, self.xgb_model, self.pca)
-        self.subscribers = set()
+        self.subscribers = set()  # (queue, min_input_value) 튜플로 저장
         self.setup_routes()
 
     def setup_routes(self):
@@ -46,29 +45,31 @@ class APIServer:
             Thread(target=self.start_websocket, daemon=True).start()
 
         @self.app.get(
-            "/api/stream", 
-            summary="SSE 실시간 고래 탐지 알림", 
+            "/api/stream",
+            summary="SSE 실시간 고래 탐지 알림",
             description="""
-        클라이언트가 SSE를 통해 실시간으로 고래 거래 알림을 받을 수 있습니다.
-        **예시 메시지 형식:**
-
-        json
-        {
-        "cluster": 3,
-        "btc": 2450.12,
-        "input_count": 2,
-        "output_count": 5,
-        "max_output_ratio": 0.76,
-        "max_input_ratio": 0.95,
-        "fee_per_max_ratio": 0.012,
-        "timestamp": "2025-06-12T09:45:00"
-        }
-            """)
-        async def stream(request: Request):
+            클라이언트가 SSE를 통해 실시간으로 고래 거래 알림을 받을 수 있습니다.
+            쿼리파라미터 `min_input_value`를 통해 알림 최소 기준값을 지정할 수 있습니다.
+            예시 메시지 형식:
+            {
+              "cluster": 3,
+              "btc": 2450.12,
+              "input_count": 2,
+              "output_count": 5,
+              "max_output_ratio": 0.76,
+              "max_input_ratio": 0.95,
+              "fee_per_max_ratio": 0.012,
+              "timestamp": "2025-06-12T09:45:00"
+            }
+            """
+        )
+        async def stream(request: Request, min_input_value: float = 1000):
             async def event_generator():
                 queue = asyncio.Queue()
-                self.subscribers.add(queue)
-                logger.info("🟢 클라이언트 SSE 연결됨")
+                subscriber = (queue, min_input_value)
+                self.subscribers.add(subscriber)
+                logger.info(f"🟢 SSE 연결됨 (min_input_value={min_input_value})")
+
                 try:
                     while True:
                         if await request.is_disconnected():
@@ -79,8 +80,8 @@ class APIServer:
                         except asyncio.TimeoutError:
                             yield ": keep-alive\n\n"
                 finally:
-                    self.subscribers.discard(queue)
-                    logger.info("🔴 클라이언트 SSE 연결 해제됨")
+                    self.subscribers.discard(subscriber)
+                    logger.info("🔴 SSE 연결 해제됨")
 
             return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -88,32 +89,32 @@ class APIServer:
             "/api/logs",
             summary="고래 탐지 로그 10건 조회",
             description="저장된 최근 10개의 로그를 반환합니다.",
-                      responses={
-                          200: {
-                              "description": "저장된 최근 10개의 로그를 반환합니다.",
-                              "content": {
-                                  "application/json": {
-                                      "example": {
-                                          "logs": [
-                                              {
-                                                  "_id": "60c72b2f9b1e8b001c8e4d3a",
-                                                  "predicted_cluster": 1,
-                                                  "pca_embedding": [-0.214622629304165, -0.344247827857334],
-                                                  "timestamp": "2025-06-11 17:34:03",
-                                                  "input_count": 2,
-                                                  "output_count": 2,
-                                                  "max_output_ratio": 0.996278328441807,
-                                                  "fee_per_max_ratio": 1.12511875001353e-8,
-                                                  "max_input_ratio": 0.998187650578164,
-                                                  "total_input_value": 2450.1223412,
-                                              }
-                                          ]
-                                      }
-                                  }
-                              }
-                          },
-                          500: {"description": "로그 조회 실패"}
-                      }
+            responses={
+                200: {
+                    "description": "저장된 최근 10개의 로그를 반환합니다.",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "logs": [
+                                    {
+                                        "_id": "60c72b2f9b1e8b001c8e4d3a",
+                                        "predicted_cluster": 1,
+                                        "pca_embedding": [-0.2146, -0.3442],
+                                        "timestamp": "2025-06-11 17:34:03",
+                                        "input_count": 2,
+                                        "output_count": 2,
+                                        "max_output_ratio": 0.9962,
+                                        "fee_per_max_ratio": 1.12e-8,
+                                        "max_input_ratio": 0.9981,
+                                        "total_input_value": 2450.12
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                500: {"description": "로그 조회 실패"}
+            }
         )
         def get_logs(limit: int = 10):
             try:
@@ -139,9 +140,11 @@ class APIServer:
                 "timestamp": result.get('timestamp')
             }
             logger.info(f"📣 SSE 브로드캐스트: {message}")
-            for queue in self.subscribers.copy():
+
+            for queue, min_input_value in self.subscribers.copy():
                 try:
-                    queue.put_nowait(message)
+                    if result["total_input_value"] >= min_input_value:
+                        queue.put_nowait(message)
                 except Exception as e:
                     logger.warning(f"SSE 전송 실패: {e}")
 

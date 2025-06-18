@@ -1,9 +1,9 @@
-# service/websocket_handler.py
 import websocket
 import json
 import logging
+import time
 from threading import Lock
-from core.config import collection, WEBSOCKET_URL, MIN_INPUT_VALUE
+from core.config import collection, WEBSOCKET_URL # ,MIN_INPUT_VALUE
 from core.model_loader import predict_cluster
 from core.transaction_processor import process_transaction
 
@@ -23,7 +23,7 @@ class WebSocketHandler:
             tx = data.get("x", {})
 
             total_input_value = sum(i.get("prev_out", {}).get("value", 0) for i in tx.get("inputs", [])) / 1e8
-            if total_input_value < MIN_INPUT_VALUE:
+            if total_input_value < 200:  # 최소 입력값 기준
                 return
 
             tx_processed = process_transaction(tx)
@@ -39,10 +39,9 @@ class WebSocketHandler:
             with self.lock:
                 self.latest_result.clear()
                 self.latest_result.update(result)
-            
+
             if hasattr(self, "callback"):
                 self.callback({**result, **tx_processed})
-
 
             collection.insert_one({**result, **tx_processed})
 
@@ -60,19 +59,19 @@ class WebSocketHandler:
     def on_open(self, ws):
         logger.info("🔗 Blockchain.com WebSocket 연결됨")
         ws.send(json.dumps({"op": "unconfirmed_sub"}))
+        self.retry_count = 0  # ✅ 연결 성공 시 retry 초기화
 
     def on_close(self, ws, close_status_code, close_msg):
-        logger.info(f"🔌 연결 종료: code={close_status_code}, msg={close_msg}")
-
-        
-    def set_callback(self, callback):
-        self.callback = callback
-   
+        logger.warning(f"🔌 WebSocket 연결 종료됨: code={close_status_code}, msg={close_msg}")
 
     def on_error(self, ws, error):
-        logger.error(f"❌ 오류 발생: {error}")
+        logger.error(f"❌ WebSocket 오류 발생: {error}")
 
-    def run_websocket(self):
+    def set_callback(self, callback):
+        self.callback = callback
+
+    def _connect_once(self):
+        """한 번의 WebSocket 연결 시도"""
         ws = websocket.WebSocketApp(
             WEBSOCKET_URL,
             on_open=self.on_open,
@@ -81,6 +80,21 @@ class WebSocketHandler:
             on_message=self.on_message
         )
         ws.run_forever(ping_interval=30, ping_timeout=10)
+
+    def run_websocket(self, base_delay=5, max_delay=300):
+        """WebSocket을 유지하며 끊기면 자동 재연결"""
+        self.retry_count = 0
+        while True:
+            try:
+                logger.info("🔁 WebSocket 연결 시도 중...")
+                self._connect_once()
+            except Exception as e:
+                logger.error(f"❌ WebSocket 예외 발생: {e}")
+
+            delay = min(base_delay * (2 ** self.retry_count), max_delay)
+            logger.info(f"⏳ {delay}초 후 재연결 시도 예정...")
+            time.sleep(delay)
+            self.retry_count += 1
 
     def get_latest_result(self):
         with self.lock:
