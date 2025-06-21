@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from service.websocket_handler import WebSocketHandler
 from core.config import collection
 from core.model_loader import load_models
+from core.schemas import WhaleTransactionList
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class APIServer:
         )
         self.scaler, self.xgb_model, self.pca = load_models()
         self.websocket_handler = WebSocketHandler(self.scaler, self.xgb_model, self.pca)
-        self.subscribers = set()  # (queue, min_input_value) 튜플로 저장
+        self.subscribers = set()
         self.setup_routes()
 
     def setup_routes(self):
@@ -47,21 +48,26 @@ class APIServer:
         @self.app.get(
             "/api/stream",
             summary="SSE 실시간 고래 탐지 알림",
-            description="""
-            클라이언트가 SSE를 통해 실시간으로 고래 거래 알림을 받을 수 있습니다.
-            쿼리파라미터 `min_input_value`를 통해 알림 최소 기준값을 지정할 수 있습니다.
-            예시 메시지 형식:
-            {
-              "cluster": 3,
-              "btc": 2450.12,
-              "input_count": 2,
-              "output_count": 5,
-              "max_output_ratio": 0.76,
-              "max_input_ratio": 0.95,
-              "fee_per_max_ratio": 0.012,
-              "timestamp": "2025-06-12T09:45:00"
-            }
-            """
+            description=(
+                "클라이언트가 SSE를 통해 실시간으로 고래 거래 알림을 받을 수 있습니다.\n\n"
+                "쿼리파라미터 `min_input_value`를 통해 알림 최소 기준값을 지정할 수 있습니다.\n\n"
+                "## 예시 요청  GET /api/stream?min_input_value=1000, default: 1000\n\n"
+                "## 예시 전송 메시지 (JSON)\n"
+                "```json\n"
+                "{\n"
+                '  "cluster": 2,\n'
+                '  "btc": 1234.56,\n'
+                '  "input_count": 3,\n'
+                '  "output_count": 4,\n'
+                '  "max_output_ratio": 0.78,\n'
+                '  "max_input_ratio": 0.91,\n'
+                '  "fee_per_max_ratio": 0.000032,\n'
+                '  "timestamp": "2025-06-21T16:45:00",\n'
+                '  "max_input_address": "1ABCDxyz...",\n'
+                '  "max_output_address": "bc1qWErty..."\n'
+                "}\n"
+                "```"
+            )
         )
         async def stream(request: Request, min_input_value: float = 1000):
             async def event_generator():
@@ -87,45 +93,46 @@ class APIServer:
 
         @self.app.get(
             "/api/logs",
-            summary="고래 탐지 로그 10건 조회",
-            description="저장된 최근 10개의 로그를 반환합니다.",
-            responses={
-                200: {
-                    "description": "저장된 최근 10개의 로그를 반환합니다.",
-                    "content": {
-                        "application/json": {
-                            "example": {
-                                "logs": [
-                                    {
-                                        "_id": "60c72b2f9b1e8b001c8e4d3a",
-                                        "predicted_cluster": 1,
-                                        "pca_embedding": [-0.2146, -0.3442],
-                                        "timestamp": "2025-06-11 17:34:03",
-                                        "input_count": 2,
-                                        "output_count": 2,
-                                        "max_output_ratio": 0.9962,
-                                        "fee_per_max_ratio": 1.12e-8,
-                                        "max_input_ratio": 0.9981,
-                                        "total_input_value": 2450.12
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                },
-                500: {"description": "로그 조회 실패"}
-            }
+            response_model=WhaleTransactionList,
+            summary="최신순으로 고래 탐지 로그 N건 조회",
+            description="저장된 최근 N개의 로그를 반환합니다. default: 20",
         )
-        def get_logs(limit: int = 10):
+        def get_logs(limit: int = 20):
             try:
                 cursor = collection.find().sort("_id", -1).limit(limit)
                 logs = list(cursor)
                 for log in logs:
                     log["_id"] = str(log["_id"])
+                    log["max_input_address"] = log.get("max_input_address", None)
+                    log["max_output_address"] = log.get("max_output_address", None)
                 return JSONResponse(content={"logs": logs})
             except Exception as e:
                 logger.error(f"❌ 로그 조회 오류: {e}")
                 return JSONResponse(status_code=500, content={"error": "로그 조회 실패"})
+
+        @self.app.get(
+            "/api/whales",
+            summary="특정 BTC 이상 고래 거래 조회",
+            response_model=WhaleTransactionList,
+            description="""
+            `total_input_value`가 특정 값 이상인 고래 거래를 조회합니다.
+            최대 입력/출력 주소도 함께 반환됩니다.
+            """
+        )
+        def get_whales(min_value: float = 1000.0, limit: int = 10):
+            try:
+                cursor = collection.find(
+                    {"total_input_value": {"$gte": min_value}}
+                ).sort("_id", -1).limit(limit)
+                logs = list(cursor)
+                for log in logs:
+                    log["_id"] = str(log["_id"])
+                    log["max_input_address"] = log.get("max_input_address", None)
+                    log["max_output_address"] = log.get("max_output_address", None)
+                return JSONResponse(content={"logs": logs})
+            except Exception as e:
+                logger.error(f"❌ 고래 거래 조회 오류: {e}")
+                return JSONResponse(status_code=500, content={"error": "고래 거래 조회 실패"})
 
     def start_websocket(self):
         def on_whale_detected(result):
@@ -137,7 +144,9 @@ class APIServer:
                 "max_output_ratio": result.get('max_output_ratio'),
                 "max_input_ratio": result.get('max_input_ratio'),
                 "fee_per_max_ratio": result.get('fee_per_max_ratio'),
-                "timestamp": result.get('timestamp')
+                "timestamp": result.get('timestamp'),
+                "max_input_address": result.get('max_input_address'),
+                "max_output_address": result.get('max_output_address')
             }
             logger.info(f"📣 SSE 브로드캐스트: {message}")
 

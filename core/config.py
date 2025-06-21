@@ -21,7 +21,7 @@ root_logger.addHandler(handler)
 
 mongo_uri = os.getenv("MONGODB_URI", "mongodb://mongo-db:27017")
 #mongo_client = MongoClient("mongodb://localhost:27017") #로컬 테스트용
-mongo_client = MongoClient(mongo_uri) #docker 환경에서 사용
+mongo_client = MongoClient(mongo_uri) #AWS EC2용
 db = mongo_client["whale_detection"]
 collection = db["whale_logs"]
 
