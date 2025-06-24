@@ -20,10 +20,10 @@ weighted avg       1.00      1.00      1.00    177789
 99.88%
 
 📊 [Test Prediction Distribution]
-cluster 0: 8,478건 (4.77%)
-cluster 1: 148,084건 (83.29%)
-cluster 2: 8,620건 (4.85%)
-cluster 3: 12,607건 (7.09%)
+cluster 0(지갑 리밸런싱): 8,478건 (4.77%)
+cluster 1(단순이체형): 148,084건 (83.29%)
+cluster 2(자금 통합형): 8,620건 (4.85%)
+cluster 3(자금 분산형): 12,607건 (7.09%)
 
 🔍 [클러스터 중심값 복원 (원래 단위)]
          input_count  output_count  max_output_ratio  max_input_ratio

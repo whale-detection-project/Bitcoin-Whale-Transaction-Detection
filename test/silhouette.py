@@ -1,44 +1,72 @@
+# ------------------------------------------------------------
+# 0) 라이브러리
+# ------------------------------------------------------------
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans          # ⚡️빠른 K-Means
 from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
-from tqdm import tqdm # 진행 상황 표시를 위해 tqdm 추가
+from tqdm import tqdm
 
-# 🔹 1. 학습 데이터 로드
-train_df = pd.read_csv("dataset/1000btc_train.csv")
-features = ['input_count', 'output_count', 'max_output_ratio', 'max_input_ratio']
+# ------------------------------------------------------------
+# 1) 데이터 로드 & 기본 전처리
+# ------------------------------------------------------------
+DATA_PATH = "dataset/1000btc_train.csv"              # 경로만 맞춰 주세요
+features = ['input_count', 'output_count',
+            'max_output_ratio', 'max_input_ratio']
 
-# 🔹 2. 로그 변환 + 정규화
-X_train_log = train_df[features].apply(lambda x: np.log1p(x))
+df = pd.read_csv(DATA_PATH, usecols=features)
+
+# 로그 변환 → 0 처리 주의
+X_log = np.log1p(df[features])
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train_log)
+X_scaled = scaler.fit_transform(X_log)
 
-# --- 💡 실루엣 분석을 위한 K-Means 최적 K 탐색 및 시각화 ---
-print("--- 실루엣 분석을 통한 최적 K 탐색 시작 ---")
-silhouette_scores = []
-K_RANGE = range(2, 11) # 클러스터 개수 2부터 10까지 테스트
+# ------------------------------------------------------------
+# 2) MiniBatchKMeans + 실루엣 점수 계산
+# ------------------------------------------------------------
+K_RANGE = range(2, 11)               # 2 ≤ k ≤ 10
+SAMPLE_SIZE = 10_000                 # silhouette 샘플 수 (8~10k면 충분)
 
-for k in tqdm(K_RANGE, desc="Calculating silhouette scores"):
-    # n_init='auto'를 사용하면 K-Means 초기화가 더 견고해집니다.
-    kmeans_temp = KMeans(n_clusters=k, random_state=42, n_init='auto')
-    labels_temp = kmeans_temp.fit_predict(X_train_scaled)
-    score = silhouette_score(X_train_scaled, labels_temp)
-    silhouette_scores.append(score)
-    # tqdm.write()를 사용하면 진행률 표시줄을 방해하지 않고 출력할 수 있습니다.
-    tqdm.write(f"k={k}, silhouette score={score:.4f}")
+sil_scores = []
 
-# 실루엣 점수 시각화
-plt.figure(figsize=(10, 6))
-plt.plot(K_RANGE, silhouette_scores, marker='o')
-plt.title('Silhouette Score for Different k values')
-plt.xlabel('Number of clusters (k)')
-plt.ylabel('Silhouette Score')
-plt.grid(True)
-plt.xticks(K_RANGE)
-plt.show()
+print("\n--- 실루엣 분석 시작 ---")
+for k in tqdm(K_RANGE, desc="k loop"):
+    mbk = MiniBatchKMeans(
+        n_clusters=k,
+        batch_size=4096,             # GPU쓰면 8192↑로 키워도 OK
+        random_state=42
+    ).fit(X_scaled)
+
+    labels = mbk.labels_
+
+    # O(N²) 방지용: sample_size 옵션
+    score = silhouette_score(
+        X_scaled,
+        labels,
+        sample_size=SAMPLE_SIZE,
+        random_state=42
+    )
+    sil_scores.append(score)
+    tqdm.write(f"k={k}\t sil={score:.4f}")
+
 print("--- 실루엣 분석 완료 ---")
-# -------------------------------------------------------------
 
-print("\n✅ 실루엣 분석이 완료되었습니다. 위에 표시된 그래프를 확인하세요.")
+# ------------------------------------------------------------
+# 3) 결과 시각화
+# ------------------------------------------------------------
+plt.figure(figsize=(8, 4))
+plt.plot(list(K_RANGE), sil_scores, marker='o')
+plt.title("Silhouette score vs k")
+plt.xlabel("k (number of clusters)")
+plt.ylabel("Silhouette score")
+plt.xticks(list(K_RANGE))
+plt.grid(True, alpha=.3)
+plt.show()
+
+# ------------------------------------------------------------
+# 4) 최적 k 자동 선택(예: 최고점 or knee)
+# ------------------------------------------------------------
+best_k = K_RANGE[int(np.argmax(sil_scores))]
+print(f"\n✅ 추천 k = {best_k}  (silhouette 최대)")

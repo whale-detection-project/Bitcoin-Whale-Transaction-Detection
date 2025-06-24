@@ -1,6 +1,7 @@
 import logging
-import json                                  # >>> 수정
-import asyncio                               # >>> 수정
+import json                                
+import asyncio                              
+import httpx
 from threading import Thread
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -9,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from service.websocket_handler import WebSocketHandler
 from core.config import collection
 from core.model_loader import load_models
-from core.schemas import WhaleTransactionList
+from core.schemas import WhaleTransactionList, AddressInfo
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,47 @@ class APIServer:
             except Exception:
                 logger.exception("❌ 고래 거래 조회 오류")
                 return JSONResponse(status_code=500, content={"error": "고래 거래 조회 실패"})
+            
+        @self.app.get(
+            "/api/address-info",
+            response_model=AddressInfo,
+            summary="지갑 주소 정보 조회",
+            description="blockchain.info API를 사용해 주소의 총 입출금, 잔고 등을 조회하고 거래소 주소로 추정되는지 여부를 반환합니다."
+        )
+        async def address_info(address: str):
+            try:
+                url = f"https://blockchain.info/rawaddr/{address}"
+                async with httpx.AsyncClient() as client:
+                    res = await client.get(url, timeout=10)
+                    if res.status_code != 200:
+                        return JSONResponse(status_code=404, content={"error": "주소 조회 실패"})
+                    data = res.json()
+                    
+                    # 사토시 → BTC 변환
+                    total_received = data.get("total_received", 0) / 1e8
+                    total_sent = data.get("total_sent", 0) / 1e8
+                    final_balance = data.get("final_balance", 0) / 1e8
+                    n_tx = data.get("n_tx", 0)
+
+                    # 거래소 주소 추정 로직 (간단 기준)
+                    is_exchange_like = (
+                        n_tx > 1000 and 
+                        total_received > 10000 and 
+                        final_balance < (total_received * 0.05)  # 잔액이 거의 없음 → hot wallet 형태
+                    )
+
+                    return {
+                        "address": address,
+                        "total_received_btc": total_received,
+                        "total_sent_btc": total_sent,
+                        "final_balance_btc": final_balance,
+                        "tx_count": n_tx,
+                        "is_exchange_like": is_exchange_like
+                    }
+
+            except Exception:
+                logger.exception("❌ 주소 정보 조회 오류")
+                return JSONResponse(status_code=500, content={"error": "주소 정보 조회 실패"})
 
     def start_websocket(self):
         def on_whale_detected(result):
