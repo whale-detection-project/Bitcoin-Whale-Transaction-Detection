@@ -2,21 +2,24 @@ import websocket
 import json
 import logging
 import time
+import numpy as np
+import torch
 from threading import Lock
-from core.config import collection, WEBSOCKET_URL
-from core.model_loader import predict_cluster
+from core.config import collection, WEBSOCKET_URL, FEATURES
 from core.transaction_processor import process_transaction
+from datetime import datetime
+from scipy.spatial.distance import cdist
 
 logger = logging.getLogger(__name__)
 
 
 class WebSocketHandler:
-    def __init__(self, scaler, mlp_model, pca, centers, tau):
-        self.scaler     = scaler
-        self.mlp_model  = mlp_model
-        self.pca        = pca
-        self.centers    = centers    
-        self.tau        = tau         
+    def __init__(self, scaler_dict, mlp_model, pca, centers, tau):
+        self.scaler     = scaler_dict      # {'mean': np.array, 'std': np.array}
+        self.model      = mlp_model        # PyTorch 모델
+        self.pca        = pca              # PCA (optional)
+        self.centers    = centers          # (4, D)
+        self.tau        = tau              # float
 
         self.latest_result = {}
         self.lock = Lock()
@@ -29,25 +32,35 @@ class WebSocketHandler:
             total_input_value = sum(
                 i.get("prev_out", {}).get("value", 0) for i in tx.get("inputs", [])
             ) / 1e8
-            if total_input_value < 200:  
+            if total_input_value < 200:
                 return
 
             tx_processed = process_transaction(tx)
-            tx_data = {k: v for k, v in tx_processed.items() if k != "total_input_value"}
+            tx_data = {k: v for k, v in tx_processed.items() if k in FEATURES}
 
-            result = predict_cluster(
-                tx_data,
-                self.scaler,
-                self.mlp_model,
-                self.pca,
-                self.centers,
-                self.tau,
-            )
+            # 전처리
+            X_np = np.array([[np.log1p(tx_data[f]) for f in FEATURES]])
+            X_scaled = (X_np - self.scaler["mean"]) / self.scaler["std"]
 
-            if "error" in result:
-                logger.error(f"❌ 예측 실패: {result['error']}")
-                logger.error(f"입력 tx_data: {tx_data}")
-                return
+            # 거리 기반 Unknown 판별
+            d_min = cdist(X_scaled, self.centers).min(axis=1)[0]
+            if d_min > self.tau:
+                cluster = 4  # Unknown
+            else:
+                self.model.eval()
+                with torch.no_grad():
+                    X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
+                    out = self.model(X_tensor)
+                    cluster = int(torch.argmax(out, dim=1).item())
+
+            # PCA 임베딩 (optional)
+            embedding = self.pca.transform(X_scaled)[0].tolist()
+
+            result = {
+                "predicted_cluster": cluster,
+                "pca_embedding": embedding,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
 
             with self.lock:
                 self.latest_result.clear()
@@ -59,7 +72,7 @@ class WebSocketHandler:
             collection.insert_one({**result, **tx_processed})
 
             logger.info(
-                f"🚨 고래 거래 감지 → 클러스터 {result['predicted_cluster']}, "
+                f"🚨 고래 거래 감지 → 클러스터 {cluster}, "
                 f"총 입력: {tx_processed['total_input_value']:.2f} BTC\n"
                 f"입력수: {tx_processed['input_count']}개, 출력수: {tx_processed['output_count']}개, "
                 f"max_output_ratio: {tx_processed['max_output_ratio']:.4f}, "

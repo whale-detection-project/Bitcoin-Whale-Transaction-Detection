@@ -39,9 +39,17 @@ class APIServer:
             allow_methods=["*"],
             allow_headers=["*"]
         )
-        (self.scaler, self.mlp_model, self.pca, self.centers, self.tau) = load_models()
+        # ✅ 모델 로드 (수정됨)
+        scaler_dict, mlp_model, km_tau_dict, pca = load_models()
+
+        self.scaler_dict = scaler_dict                # {'mean': ..., 'std': ...}
+        self.mlp_model   = mlp_model                  # PyTorch MLP 모델 객체
+        self.centers     = km_tau_dict["centers"]     # (4, D) ndarray
+        self.tau         = km_tau_dict["tau"]         # float
+        self.pca         = pca                        # PCA 임베딩
+
         self.websocket_handler = WebSocketHandler(
-            self.scaler,
+            self.scaler_dict,
             self.mlp_model,
             self.pca,
             self.centers,
@@ -49,7 +57,7 @@ class APIServer:
         )
 
         self.subscribers = set()
-        self.main_loop = None                
+        self.main_loop = None
         self.setup_routes()
 
     def setup_routes(self):
