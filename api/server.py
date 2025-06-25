@@ -150,20 +150,12 @@ class APIServer:
                     final_balance = data.get("final_balance", 0) / 1e8
                     n_tx = data.get("n_tx", 0)
 
-                    # 거래소 주소 추정 로직 (간단 기준)
-                    is_exchange_like = (
-                        n_tx > 1000 and 
-                        total_received > 10000 and 
-                        final_balance < (total_received * 0.05)  # 잔액이 거의 없음 → hot wallet 형태
-                    )
-
                     return {
                         "address": address,
                         "total_received_btc": total_received,
                         "total_sent_btc": total_sent,
                         "final_balance_btc": final_balance,
                         "tx_count": n_tx,
-                        "is_exchange_like": is_exchange_like
                     }
 
             except Exception:

@@ -63,7 +63,6 @@ class AddressInfo(BaseModel):
     total_sent_btc: float = Field(..., description="주소가 보낸 총 BTC")
     final_balance_btc: float = Field(..., description="현재 잔고 BTC")
     tx_count: int = Field(..., description="총 트랜잭션 수")
-    is_exchange_like: bool = Field(..., description="거래소 지갑으로 추정되는지 여부")
 
     model_config = {
         "json_schema_extra": {
@@ -73,7 +72,6 @@ class AddressInfo(BaseModel):
                 "total_sent_btc": 109800.3,
                 "final_balance_btc": 200.2,
                 "tx_count": 3520,
-                "is_exchange_like": True
             }
         }
     }
