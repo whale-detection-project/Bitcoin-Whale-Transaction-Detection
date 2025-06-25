@@ -24,18 +24,18 @@
 
 ## 🚀 주요 기능
 
-### ✅ 고래 유형 자동 분류
+### 고래 유형 자동 분류
 
 * `input_count`, `output_count`, `max_input_ratio`, `max_output_ratio` 기본
 * KMeans 로 클러스터링 후, MLP 모델로 실시간 분류 수행
 
-### ✅ 실시간 탐지 & 스트림링
+### 실시간 탐지 & 스트림링
 
 * Binance WebSocket 기반 실시간 트랜잭잭션 수신
 * 조건변수 (`input_value ≥ X`) 필터링
-* SSE(Server-Sent Events)로 대시보드로 실시간 전송
+* SSE(Server-Sent Events)로 프론트엔드 대시보드로 실시간 전송
 
-### ✅ RESTful API 제공
+### RESTful API 제공
 
 * `/api/stream`: SSE 실시간 고래 탐지 이벤트 스트림
 * `/api/logs`: MongoDB에서 경로 고래 거래 로그 조회
@@ -44,7 +44,7 @@
 
 ---
 
-## 🧠 고래 유형 정의 (`cluster_label`)
+## 🐋 고래 유형 정의 (`cluster_label`)
 
 | 라벨 | 설명 |
 |------|------|
@@ -58,7 +58,7 @@
 
 ## ⚙️ 실행 방법
 
-### 1. 의정성 설치
+### 1. 의존성성 설치
 
 ```bash
 pip install -r requirements.txt
@@ -98,26 +98,26 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 📘 API 문서 (Swagger)
+## 📘 API 문서 (Docs)
 
-* Swagger: [`/api/docs`](http://localhost:8000/api/docs) 
+* Docs: [`/api/docs`](http://localhost:8000/api/docs) 
 * Redoc: [`/api/redoc`](http://localhost:8000/api/redoc)
-* (배포용) Swagger: [`wt-backend.store/api/docs`](https://wt-backend.store/api/docs)
+* (배포용) Docs: [`wt-backend.store/api/docs`](https://wt-backend.store/api/docs)
 ---
 
-## 🧪 참고 사항
+## 참고 사항
 
 * 고래 거래 데이터는 MongoDB에 자동 저장됩니다.
-* `/model/` 포범은 학습된 MLP 모델(`mlp4_torch.pt`), 스케일러, PCA, KMeans 중심점 등이 포함됩니다.
+* `/model/`은 학습된 MLP 모델(`mlp4_torch.pt`), 스케일러, PCA, KMeans 중심점 등이 포함됩니다.
 
 ---
 
 ## 🔧 개발 규칙
 
-### ✅ 커버트 메시지 형식
+### 커밋밋 메시지 형식
 
 * 형식: `type: subject`
-* 예시: `feat: SSE 고래 이벤트 전송 추가`
+* 예시: `feat: SSE 고래 알림 엔드포인트 추가`
 
 | 타입       | 설명             |
 | -------- | -------------- |
@@ -129,15 +129,15 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 | test     | 테스트 추가         |
 | chore    | 설정/빌드 관련       |
 
-### ✅ 브랜치 규칙
+### 브랜치 규칙
 
 * `main`: 배포용 안정 브랜치
 * `develop`: 기능 통합 브랜치
 * `feature/*`: 기능 개발 브랜치
 * `fix/*`: 버그 수정 브랜치
 
-### ✅ PR 규칙
+### PR 규칙
 
-* PR 제목: 커버트 메시지 형식 구조
+* PR 제목: 커밋 메시지 형식 구조
 * PR 본문: 변경 사항 규정
 * 발생한 충돌 해결 + 테스트 통과 필요
