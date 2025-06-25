@@ -39,15 +39,8 @@ class APIServer:
             allow_methods=["*"],
             allow_headers=["*"]
         )
-        (self.scaler, self.mlp_model, self.pca, self.centers, self.tau) = load_models()
-        self.websocket_handler = WebSocketHandler(
-            self.scaler,
-            self.mlp_model,
-            self.pca,
-            self.centers,
-            self.tau
-        )
-
+        self.scaler, self.xgb_model, self.pca = load_models()
+        self.websocket_handler = WebSocketHandler(self.scaler, self.xgb_model, self.pca)
         self.subscribers = set()
         self.main_loop = None                
         self.setup_routes()
