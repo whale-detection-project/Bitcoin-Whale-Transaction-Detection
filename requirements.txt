@@ -30,3 +30,4 @@ websocket-client==1.8.0
 xgboost==2.1.4
 zope.event==5.0
 zope.interface==7.2
+httpx==0.28.1
