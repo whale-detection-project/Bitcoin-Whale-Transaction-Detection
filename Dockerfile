@@ -1,5 +1,5 @@
 # 📌 Python 3.9 기반 이미지 사용
-FROM python:3.9
+FROM python:3.11.9
 
 # 📌 작업 디렉토리 생성
 WORKDIR /app
